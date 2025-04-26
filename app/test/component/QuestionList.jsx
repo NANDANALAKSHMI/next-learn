@@ -149,14 +149,38 @@ const QuestionList = () => {
             const formData = new FormData();
             formData.append('answers', JSON.stringify(answersArray));
 
-            await postAnswer(token, formData);
+            const response = await postAnswer(token, formData);
+            console.log(response, "ll");
 
-            if (isFinalSubmit) {
-                dispatch(clearQuiz());
-                router.push('/results');
+            if (response && response.success) {
+                // Store the response data in localStorage
+                const resultData = {
+                    answers: answersArray,
+                    questions: quizData.questions,
+                    submissionTime: new Date().toISOString(),
+                    quizResults: {
+                        score: response.score || 0,
+                        correct_answers: response.correct || 0,
+                        incorrect_answers: response.wrong || 0,
+                        not_attended: response.not_attended || 0,
+                        exam_history_id: response.exam_history_id,
+                        submitted_at: response.submitted_at
+                    }
+                };
+
+                localStorage.setItem('quizResults', JSON.stringify(resultData));
+
+                if (isFinalSubmit) {
+                    dispatch(clearQuiz());
+                    router.push('/results');
+                }
+            } else {
+                throw new Error("Submission failed");
             }
         } catch (err) {
             console.error("Submission error:", err);
+            // Optionally show an error message to the user
+            setError("Failed to submit quiz. Please try again.");
         } finally {
             setIsSubmitting(false);
             setShowSubmitModal(false);
