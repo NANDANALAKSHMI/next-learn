@@ -4,7 +4,9 @@ export function middleware(request) {
     const { pathname } = request.nextUrl;
     const protectedRoutes = [
         '/test',
-        '/result'
+        '/result',
+        '/otp',
+        '/profile'
     ];
 
     const token = request.cookies.get('access_token')?.value;
@@ -20,6 +22,8 @@ export function middleware(request) {
 export const config = {
     matcher: [
         '/test',
-        '/result'
+        '/result',
+        '/otp',
+        '/profile'
     ],
 };
