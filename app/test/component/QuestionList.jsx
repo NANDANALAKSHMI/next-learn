@@ -5,9 +5,11 @@ import { useSelector, useDispatch } from 'react-redux';
 import Header from './Header';
 import QuestionDisplay from './QuestionDisplay';
 import QuestionNavigation from './QuestionNavigation';
+
 import { getQuestions, postAnswer } from '@/app/ApiService/apiServices';
 import Cookies from 'js-cookie';
 import { setAnswer, toggleMarked, clearQuiz } from '@/app/redux/slice/quizSlice';
+import SubmitConfirmationModal from '@/app/shared/SubmitConfirmationModal';
 
 const QuestionList = () => {
     const router = useRouter();
@@ -21,8 +23,8 @@ const QuestionList = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSubmitModal, setShowSubmitModal] = useState(false);
     const hasFetched = useRef(false);
-
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -48,7 +50,6 @@ const QuestionList = () => {
             }));
         }
     }, [currentQuestionIndex, quizData]);
-
 
     useEffect(() => {
         if (!hasFetched.current) {
@@ -97,7 +98,6 @@ const QuestionList = () => {
     const handleAnswerSelect = (questionId, answer) => {
         dispatch(setAnswer({ questionId, answer }));
 
-
         const questionNumber = quizData.questions.find(q => q.question_id === questionId)?.number;
         if (questionNumber) {
             setQuestionStatus(prev => ({
@@ -117,9 +117,13 @@ const QuestionList = () => {
         setQuestionStatus(prev => ({
             ...prev,
             [questionNumber]: markedForReview.includes(questionId)
-                ? answers[questionId] ? 'answered-review' : 'review'
-                : answers[questionId] ? 'answered' : 'attended'
+                ? answers[questionId] ? 'answered' : 'attended'
+                : answers[questionId] ? 'answered-review' : 'review'
         }));
+    };
+
+    const confirmSubmit = () => {
+        setShowSubmitModal(true);
     };
 
     const submitAnswers = async (isFinalSubmit = false) => {
@@ -130,13 +134,11 @@ const QuestionList = () => {
             const token = Cookies.get("access_token");
             if (!token) throw new Error("Token not found");
 
-
             quizData.questions.forEach(question => {
                 if (answers[question.question_id] === undefined) {
                     dispatch(setAnswer({ questionId: question.question_id, answer: null }));
                 }
             });
-
 
             const answersArray = quizData.questions.map(question => ({
                 question_id: question.question_id,
@@ -151,24 +153,25 @@ const QuestionList = () => {
 
             if (isFinalSubmit) {
                 dispatch(clearQuiz());
-                // router.push('/results');
+                router.push('/results');
             }
         } catch (err) {
             console.error("Submission error:", err);
         } finally {
             setIsSubmitting(false);
+            setShowSubmitModal(false);
         }
     };
 
     const goToQuestion = (index) => {
         setCurrentQuestionIndex(index);
     };
-    const navigateQuestion = (direction) => {
 
+    const navigateQuestion = (direction) => {
         const questionId = quizData.questions[currentQuestionIndex].question_id;
         const questionNumber = quizData.questions[currentQuestionIndex].number;
 
-        // If no answer selected, save as null
+
         if (answers[questionId] === undefined) {
             dispatch(setAnswer({ questionId, answer: null }));
             setQuestionStatus(prev => ({
@@ -185,7 +188,6 @@ const QuestionList = () => {
         setCurrentQuestionIndex(newIndex);
     };
 
-
     if (loading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
     if (error) return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>;
     if (!quizData?.questions?.length) return <div className="flex justify-center items-center h-screen">No questions found.</div>;
@@ -193,76 +195,94 @@ const QuestionList = () => {
     const currentQuestion = quizData.questions[currentQuestionIndex];
     const isLastQuestion = currentQuestionIndex === quizData.questions.length - 1;
 
+
+    const questionsAnswered = Object.keys(answers).filter(key => answers[key] !== null && answers[key] !== undefined).length;
+
     return (
-        <div className="flex flex-col h-screen px-10">
-            <Header
-                title="Web Design MCQ Quiz"
-                questionNumber={currentQuestion.number}
-                totalQuestions={quizData.questions.length}
-                timeRemaining={formatTime(timeRemaining)}
-            />
 
-            <div className="flex flex-1 overflow-hidden">
-                <div className="flex-1 p-4 overflow-y-auto">
-                    <QuestionDisplay
-                        questionData={currentQuestion}
-                        currentAnswer={answers[currentQuestion.question_id]}
-                        onAnswerSelect={(answer) => handleAnswerSelect(currentQuestion.question_id, answer)}
-                    />
+        <>
+            <div className="flex flex-col h-screen px-10">
+                <Header
+                    title="Web Design MCQ Quiz"
+                    questionNumber={currentQuestion.number}
+                    totalQuestions={quizData.questions.length}
+                    timeRemaining={formatTime(timeRemaining)}
+                />
 
-                    <div className="flex justify-between py-4 gap-3">
-                        <button
-                            className={`px-6 py-2 rounded flex-1 ${markedForReview.includes(currentQuestion.question_id)
+                <div className="flex flex-1 overflow-hidden">
+                    <div className="flex-1 p-4 overflow-y-auto">
+                        <QuestionDisplay
+                            questionData={currentQuestion}
+                            currentAnswer={answers[currentQuestion.question_id]}
+                            onAnswerSelect={(answer) => handleAnswerSelect(currentQuestion.question_id, answer)}
+                        />
+
+                        <div className="flex justify-between py-4 gap-3">
+                            <button
+                                className={`px-6 py-2 rounded flex-1 ${markedForReview.includes(currentQuestion.question_id)
                                     ? "bg-purple-700 text-white"
                                     : "bg-[#800080] text-white"
-                                }`}
-                            onClick={handleMarkForReview}
-                        >
-                            {markedForReview.includes(currentQuestion.question_id)
-                                ? "Unmark Review"
-                                : "Mark for Review"}
-                        </button>
-
-                        <button
-                            className="bg-gray-300 text-black px-6 py-2 rounded flex-1"
-                            onClick={() => navigateQuestion('prev')}
-                            disabled={currentQuestionIndex === 0}
-                        >
-                            Previous
-                        </button>
-
-                        {isLastQuestion ? (
-                            <button
-                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded flex-1"
-                                onClick={() => submitAnswers(true)}
-                                disabled={isSubmitting}
+                                    }`}
+                                onClick={handleMarkForReview}
                             >
-                                {isSubmitting ? "Submitting..." : "Submit Quiz"}
+                                {markedForReview.includes(currentQuestion.question_id)
+                                    ? "Unmark Review"
+                                    : "Mark for Review"}
                             </button>
-                        ) : (
+
                             <button
-                                className="bg-gray-800 text-white px-6 py-2 rounded flex-1"
-                                onClick={() => navigateQuestion('next')}
+                                className="bg-gray-300 text-black px-6 py-2 rounded flex-1"
+                                onClick={() => navigateQuestion('prev')}
+                                disabled={currentQuestionIndex === 0}
                             >
-                                Next
+                                Previous
                             </button>
-                        )}
+
+                            {isLastQuestion ? (
+                                <button
+                                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded flex-1"
+                                    onClick={confirmSubmit}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? "Submitting..." : "Submit Quiz"}
+                                </button>
+                            ) : (
+                                <button
+                                    className="bg-gray-800 text-white px-6 py-2 rounded flex-1"
+                                    onClick={() => navigateQuestion('next')}
+                                >
+                                    Next
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="w-80 p-4 bg-gray-50 border-l overflow-y-auto">
+                        <QuestionNavigation
+                            totalQuestions={quizData.questions.length}
+                            currentQuestion={currentQuestion.number}
+                            questionStatus={questionStatus}
+                            onQuestionClick={(num) => {
+                                const index = quizData.questions.findIndex(q => q.number === num);
+                                if (index !== -1) goToQuestion(index);
+                            }}
+                        />
                     </div>
                 </div>
 
-                <div className="w-80 p-4 bg-gray-50 border-l overflow-y-auto">
-                    <QuestionNavigation
-                        totalQuestions={quizData.questions.length}
-                        currentQuestion={currentQuestion.number}
-                        questionStatus={questionStatus}
-                        onQuestionClick={(num) => {
-                            const index = quizData.questions.findIndex(q => q.number === num);
-                            if (index !== -1) goToQuestion(index);
-                        }}
-                    />
-                </div>
+                {/* Submit Confirmation Modal */}
+
             </div>
-        </div>
+            <SubmitConfirmationModal
+                isOpen={showSubmitModal}
+                onClose={() => setShowSubmitModal(false)}
+                onSubmit={() => submitAnswers(true)}
+                timeRemaining={formatTime(timeRemaining)}
+                totalQuestions={quizData.questions.length}
+                questionsAnswered={questionsAnswered}
+                markedForReviewCount={markedForReview.length}
+            />
+        </>
     );
 };
 
