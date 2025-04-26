@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import Header from './Header';
@@ -15,14 +15,13 @@ const QuestionList = () => {
     const { answers, markedForReview } = useSelector((state) => state.quiz);
 
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [timeRemaining, setTimeRemaining] = useState(87 * 60 + 13);
+    const [timeRemaining, setTimeRemaining] = useState(8 * 60 + 30); // 8:30 remaining
     const [questionStatus, setQuestionStatus] = useState({});
     const [quizData, setQuizData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const hasFetched = useRef(false);
-    const autoSaveTimer = useRef(null);
 
     // Timer effect
     useEffect(() => {
@@ -40,18 +39,16 @@ const QuestionList = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // Auto-save effect
-    // useEffect(() => {
-    //     autoSaveTimer.current = setInterval(() => {
-    //         submitAnswers(false);
-    //     }, 30000); // Auto-save every 30 seconds
-
-    //     return () => {
-    //         if (autoSaveTimer.current) {
-    //             clearInterval(autoSaveTimer.current);
-    //         }
-    //     };
-    // }, [answers, markedForReview]);
+    // Track viewed questions by number
+    useEffect(() => {
+        if (quizData?.questions) {
+            const questionNumber = quizData.questions[currentQuestionIndex].number;
+            setQuestionStatus(prev => ({
+                ...prev,
+                [questionNumber]: prev[questionNumber] === 'unanswered' ? 'attended' : prev[questionNumber]
+            }));
+        }
+    }, [currentQuestionIndex, quizData]);
 
     // Fetch questions
     useEffect(() => {
@@ -66,14 +63,15 @@ const QuestionList = () => {
 
                     const initialStatus = {};
                     response.data.questions.forEach(question => {
+                        const questionNumber = question.number;
                         if (answers[question.question_id] !== undefined) {
-                            initialStatus[question.question_id] = markedForReview.includes(question.question_id)
+                            initialStatus[questionNumber] = markedForReview.includes(question.question_id)
                                 ? 'answered-review'
                                 : 'answered';
                         } else if (markedForReview.includes(question.question_id)) {
-                            initialStatus[question.question_id] = 'review';
+                            initialStatus[questionNumber] = 'review';
                         } else {
-                            initialStatus[question.question_id] = 'unanswered';
+                            initialStatus[questionNumber] = 'unanswered';
                         }
                     });
 
@@ -99,24 +97,29 @@ const QuestionList = () => {
 
     const handleAnswerSelect = (questionId, answer) => {
         dispatch(setAnswer({ questionId, answer }));
-
-        setQuestionStatus(prev => ({
-            ...prev,
-            [questionId]: markedForReview.includes(questionId)
-                ? 'answered-review'
-                : 'answered'
-        }));
+        
+        // Update status based on question number
+        const questionNumber = quizData.questions.find(q => q.question_id === questionId)?.number;
+        if (questionNumber) {
+            setQuestionStatus(prev => ({
+                ...prev,
+                [questionNumber]: markedForReview.includes(questionId)
+                    ? 'answered-review'
+                    : 'answered'
+            }));
+        }
     };
 
     const handleMarkForReview = () => {
         const questionId = quizData.questions[currentQuestionIndex].question_id;
+        const questionNumber = quizData.questions[currentQuestionIndex].number;
         dispatch(toggleMarked(questionId));
 
         setQuestionStatus(prev => ({
             ...prev,
-            [questionId]: markedForReview.includes(questionId)
-                ? answers[questionId] ? 'answered' : 'attended'
-                : answers[questionId] ? 'answered-review' : 'review'
+            [questionNumber]: markedForReview.includes(questionId)
+                ? answers[questionId] ? 'answered-review' : 'review'
+                : answers[questionId] ? 'answered' : 'attended'
         }));
     };
 
@@ -127,29 +130,18 @@ const QuestionList = () => {
         try {
             const token = Cookies.get("access_token");
             if (!token) throw new Error("Token not found");
-    
-            const formData = new FormData();
-    
-            // Convert answers with integer IDs
-            const answersArray = Object.entries(answers).map(([question_id, selected_option_id]) => ({
-                question_id: parseInt(question_id, 10),
-                selected_option_id: parseInt(selected_option_id, 10),
-                marked_for_review: markedForReview.includes(question_id)
-            }));
-    
-            // Append as JSON string
-            formData.append('answers', JSON.stringify(answersArray));
-    
-            console.log('Processed answers:', answersArray);
-            for (let [key, value] of formData.entries()) {
-                console.log(key, value);
-            }
-    
-            await postAnswer(token, formData);
-    
+
+            const answersArray = quizData.questions.map(question => ({
+                question_id: question.question_id,
+                selected_option_id: answers[question.question_id],
+                marked_for_review: markedForReview.includes(question.question_id)
+            })).filter(answer => answer.selected_option_id !== undefined);
+
+            await postAnswer(token, { answers: answersArray });
+
             if (isFinalSubmit) {
                 dispatch(clearQuiz());
-                // router.push('/results');
+                router.push('/results');
             }
         } catch (err) {
             console.error("Submission error:", err);
@@ -158,8 +150,7 @@ const QuestionList = () => {
         }
     };
 
-    const goToQuestion = async (index) => {
-        await submitAnswers(false);
+    const goToQuestion = (index) => {
         setCurrentQuestionIndex(index);
     };
 
@@ -167,7 +158,6 @@ const QuestionList = () => {
         const newIndex = direction === 'next'
             ? Math.min(currentQuestionIndex + 1, quizData.questions.length - 1)
             : Math.max(currentQuestionIndex - 1, 0);
-
         setCurrentQuestionIndex(newIndex);
     };
 
@@ -181,8 +171,8 @@ const QuestionList = () => {
     return (
         <div className="flex flex-col h-screen px-10">
             <Header
-                title="Ancient Indian History MCQ"
-                questionNumber={currentQuestionIndex + 1}
+                title="Web Design MCQ Quiz"
+                questionNumber={currentQuestion.number}
                 totalQuestions={quizData.questions.length}
                 timeRemaining={formatTime(timeRemaining)}
             />
@@ -237,14 +227,15 @@ const QuestionList = () => {
                 </div>
 
                 <div className="w-80 p-4 bg-gray-50 border-l overflow-y-auto">
-                <QuestionNavigation
-                        totalQuestions={quizData.questions_count}
-                        currentQuestion={currentQuestionIndex + 1}
+                    <QuestionNavigation
+                        totalQuestions={quizData.questions.length}
+                        currentQuestion={currentQuestion.number}
                         questionStatus={questionStatus}
-                        markedForReview={markedForReview}
-                        onQuestionClick={goToQuestion}
+                        onQuestionClick={(num) => {
+                            const index = quizData.questions.findIndex(q => q.number === num);
+                            if (index !== -1) goToQuestion(index);
+                        }}
                     />
-
                 </div>
             </div>
         </div>
