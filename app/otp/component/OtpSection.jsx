@@ -13,7 +13,7 @@ const OtpSection = () => {
   const [mobile, setMobile] = useState('');
   const router = useRouter();
 
-  // Load mobile from localStorage when component mounts
+
   useEffect(() => {
     const storedMobile = localStorage.getItem('authMobile');
     if (!storedMobile) {
@@ -27,7 +27,6 @@ const OtpSection = () => {
     }
   }, []);
 
-  // Countdown timer for resend OTP
   useEffect(() => {
     let timer;
     if (countdown > 0) {
@@ -36,7 +35,7 @@ const OtpSection = () => {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // Format mobile number for display
+
   const formatMobileNumber = (num) => {
     if (!num) return '+XX XXXX XXXXXX';
     const countryCode = num.substring(0, 3);
@@ -45,7 +44,6 @@ const OtpSection = () => {
     return `${countryCode} ${firstPart} ${secondPart}`;
   };
 
-  // Handle OTP verification
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -67,12 +65,12 @@ const OtpSection = () => {
       const response = await verifyOtpApi(formData);
 
       if (response?.data?.success) {
-        
+
         enqueueSnackbar("OTP verified successfully!", {
           variant: "success",
           autoHideDuration: 2000,
         });
-        
+
         router.push('/profile');
       } else {
         enqueueSnackbar(response?.data?.message || "Invalid OTP", {
@@ -123,7 +121,7 @@ const OtpSection = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-gradient relative overflow-hidden">
+    <div className="flex items-center justify-center min-h-screen bg-slate-gradient relative overflow-hidden p-4">
       <div className="absolute inset-0 opacity-20">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
@@ -186,8 +184,8 @@ const OtpSection = () => {
               </button>
 
               <span className="text-xs text-gray-500">
-                {countdown > 0 
-                  ? `Try again in ${countdown}s` 
+                {countdown > 0
+                  ? `Try again in ${countdown}s`
                   : "Didn't receive code?"}
               </span>
             </div>

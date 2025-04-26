@@ -3,13 +3,14 @@ import React, { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import LogoutConfirmationModal from "./LogoutConfirmationModal";
 import Image from "next/image";
+import Cookies from "js-cookie";
 
 const Navbar = () => {
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
 
-    // Routes where navbar should be hidden
+ 
     const hiddenRoutes = ["/", "/otp", "/profile"];
     const shouldHideNavbar = hiddenRoutes.includes(pathname);
 
@@ -18,12 +19,8 @@ const Navbar = () => {
     };
 
     const handleConfirmLogout = () => {
-        // Clear all authentication data
-        localStorage.removeItem('authMobile');
-        localStorage.removeItem('userData');
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-
+        Cookies.remove('access_token');
+        Cookies.remove('refresh_token');
         setIsLogoutModalOpen(false);
         router.push("/");
     };

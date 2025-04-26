@@ -63,7 +63,7 @@ const Login = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-gradient relative overflow-hidden">
+        <div className="flex items-center justify-center min-h-screen bg-slate-gradient relative overflow-hidden p-4">
             <div className="absolute inset-0 opacity-20">
                 {Array.from({ length: 5 }).map((_, i) => (
                     <div
@@ -83,7 +83,7 @@ const Login = () => {
             <div className="flex bg-slate-800 rounded-lg overflow-hidden shadow-2xl w-full max-w-5xl relative z-10">
                 <Banner />
 
-                <div className="w-full md:w-1/2 bg-white p-8 flex flex-col justify-center">
+                <div className="w-full md:w-1/2 bg-white p-8 flex flex-col justify-center ">
                     <h2 className="text-xl font-bold mb-2">Enter your phone number</h2>
                     <p className="text-sm text-gray-600 mb-6">We use your mobile number to identify your account</p>
 

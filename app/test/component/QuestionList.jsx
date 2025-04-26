@@ -225,16 +225,16 @@ const QuestionList = () => {
     return (
 
         <>
-            <div className="flex flex-col h-screen px-10">
-                <Header
-                    title="Web Design MCQ Quiz"
-                    questionNumber={currentQuestion.number}
-                    totalQuestions={quizData.questions.length}
-                    timeRemaining={formatTime(timeRemaining)}
-                />
+            <Header
+                title="Web Design MCQ Quiz"
+                questionNumber={currentQuestion.number}
+                totalQuestions={quizData.questions.length}
+                timeRemaining={formatTime(timeRemaining)}
+            />
+            <div className="flex flex-col h-screen md:px-10 px-4 py-2">
 
-                <div className="flex flex-1 overflow-hidden">
-                    <div className="flex-1 p-4 overflow-y-auto">
+                <div className="lg:flex flex-1 overflow-hidden px-2 gap-3">
+                    <div className="lg:w-[70%] overflow-y-auto ">
                         <QuestionDisplay
                             questionData={currentQuestion}
                             currentAnswer={answers[currentQuestion.question_id]}
@@ -243,7 +243,7 @@ const QuestionList = () => {
 
                         <div className="flex justify-between py-4 gap-3">
                             <button
-                                className={`px-6 py-2 rounded flex-1 ${markedForReview.includes(currentQuestion.question_id)
+                                className={`md:px-6 md:py-2 px-3 py2 rounded flex-1 ${markedForReview.includes(currentQuestion.question_id)
                                     ? "bg-purple-700 text-white"
                                     : "bg-[#800080] text-white"
                                     }`}
@@ -281,7 +281,9 @@ const QuestionList = () => {
                         </div>
                     </div>
 
-                    <div className="w-80 p-4 bg-gray-50 border-l overflow-y-auto">
+                    <div className="lg:w-[30%]  bg-gray-50 lg:border-l overflow-y-auto py-2" style={{
+                        borderLeft: '0.87px solid #CECECE'
+                    }}>
                         <QuestionNavigation
                             totalQuestions={quizData.questions.length}
                             currentQuestion={currentQuestion.number}
@@ -294,7 +296,7 @@ const QuestionList = () => {
                     </div>
                 </div>
 
-                {/* Submit Confirmation Modal */}
+
 
             </div>
             <SubmitConfirmationModal

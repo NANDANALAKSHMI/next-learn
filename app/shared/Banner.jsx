@@ -3,7 +3,7 @@ import React from 'react'
 
 const Banner = () => {
     return (
-        <div className="w-full md:w-1/2 p-8 flex flex-col items-center justify-center bg-slate-800">
+        <div className=" hidden md:flex  w-full md:w-1/2 p-8 flex-col items-center justify-center bg-slate-800  ">
 
             <div className="flex justify-center w-full">
                 <Image

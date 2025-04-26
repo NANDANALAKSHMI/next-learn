@@ -4,7 +4,7 @@ import QuestionList from '../component/QuestionList'
 
 const Question = () => {
   return (
-    <div>
+    <div className='bg-[#f4fcff]'>
       <QuestionList/>
     </div>
   )

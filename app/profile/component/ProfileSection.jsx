@@ -92,7 +92,7 @@ const ProfileSection = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-gradient relative overflow-hidden">
+    <div className="flex items-center justify-center min-h-screen bg-slate-gradient relative overflow-hidden p-4">
       <div className="absolute inset-0 opacity-20">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
