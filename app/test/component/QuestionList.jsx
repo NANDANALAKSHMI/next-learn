@@ -15,7 +15,7 @@ const QuestionList = () => {
     const { answers, markedForReview } = useSelector((state) => state.quiz);
 
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [timeRemaining, setTimeRemaining] = useState(8 * 60 + 30); // 8:30 remaining
+    const [timeRemaining, setTimeRemaining] = useState(8 * 60 + 30);
     const [questionStatus, setQuestionStatus] = useState({});
     const [quizData, setQuizData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -23,7 +23,7 @@ const QuestionList = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const hasFetched = useRef(false);
 
-    // Timer effect
+
     useEffect(() => {
         const timer = setInterval(() => {
             setTimeRemaining(prev => {
@@ -39,7 +39,6 @@ const QuestionList = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // Track viewed questions by number
     useEffect(() => {
         if (quizData?.questions) {
             const questionNumber = quizData.questions[currentQuestionIndex].number;
@@ -50,7 +49,7 @@ const QuestionList = () => {
         }
     }, [currentQuestionIndex, quizData]);
 
-    // Fetch questions
+
     useEffect(() => {
         if (!hasFetched.current) {
             const fetchQuestions = async () => {
@@ -97,8 +96,8 @@ const QuestionList = () => {
 
     const handleAnswerSelect = (questionId, answer) => {
         dispatch(setAnswer({ questionId, answer }));
-        
-        // Update status based on question number
+
+
         const questionNumber = quizData.questions.find(q => q.question_id === questionId)?.number;
         if (questionNumber) {
             setQuestionStatus(prev => ({
@@ -125,23 +124,34 @@ const QuestionList = () => {
 
     const submitAnswers = async (isFinalSubmit = false) => {
         if (isSubmitting || !quizData?.questions) return;
-    
+
         setIsSubmitting(true);
         try {
             const token = Cookies.get("access_token");
             if (!token) throw new Error("Token not found");
 
+
+            quizData.questions.forEach(question => {
+                if (answers[question.question_id] === undefined) {
+                    dispatch(setAnswer({ questionId: question.question_id, answer: null }));
+                }
+            });
+
+
             const answersArray = quizData.questions.map(question => ({
                 question_id: question.question_id,
-                selected_option_id: answers[question.question_id],
+                selected_option_id: answers[question.question_id] || null,
                 marked_for_review: markedForReview.includes(question.question_id)
-            })).filter(answer => answer.selected_option_id !== undefined);
+            }));
 
-            await postAnswer(token, { answers: answersArray });
+            const formData = new FormData();
+            formData.append('answers', JSON.stringify(answersArray));
+
+            await postAnswer(token, formData);
 
             if (isFinalSubmit) {
                 dispatch(clearQuiz());
-                router.push('/results');
+                // router.push('/results');
             }
         } catch (err) {
             console.error("Submission error:", err);
@@ -153,13 +163,28 @@ const QuestionList = () => {
     const goToQuestion = (index) => {
         setCurrentQuestionIndex(index);
     };
-
     const navigateQuestion = (direction) => {
+
+        const questionId = quizData.questions[currentQuestionIndex].question_id;
+        const questionNumber = quizData.questions[currentQuestionIndex].number;
+
+        // If no answer selected, save as null
+        if (answers[questionId] === undefined) {
+            dispatch(setAnswer({ questionId, answer: null }));
+            setQuestionStatus(prev => ({
+                ...prev,
+                [questionNumber]: markedForReview.includes(questionId)
+                    ? 'review'
+                    : 'attended'
+            }));
+        }
+
         const newIndex = direction === 'next'
             ? Math.min(currentQuestionIndex + 1, quizData.questions.length - 1)
             : Math.max(currentQuestionIndex - 1, 0);
         setCurrentQuestionIndex(newIndex);
     };
+
 
     if (loading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
     if (error) return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>;
@@ -187,11 +212,10 @@ const QuestionList = () => {
 
                     <div className="flex justify-between py-4 gap-3">
                         <button
-                            className={`px-6 py-2 rounded flex-1 ${
-                                markedForReview.includes(currentQuestion.question_id)
+                            className={`px-6 py-2 rounded flex-1 ${markedForReview.includes(currentQuestion.question_id)
                                     ? "bg-purple-700 text-white"
                                     : "bg-[#800080] text-white"
-                            }`}
+                                }`}
                             onClick={handleMarkForReview}
                         >
                             {markedForReview.includes(currentQuestion.question_id)
