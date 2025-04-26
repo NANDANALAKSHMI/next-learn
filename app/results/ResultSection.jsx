@@ -23,6 +23,8 @@ const ResultSection = () => {
 
   const handleDone = () => {
     localStorage.removeItem('quizResults')
+    localStorage.removeItem('authMobile')
+    localStorage.removeItem('userData')
     Cookies.remove('access_token');
     Cookies.remove('refresh_token');
 
